@@ -862,7 +862,7 @@ class TestApiChatDrainOnDisconnect:
         state = _make_state(tmp_path)
         slot = state.get_or_create_slot("s1")
 
-        async def fake_run_chat(st, sl, msg, *, _directive_user_origin):
+        async def fake_run_chat(st, sl, msg, *, _directive_user_origin, **_kw):
             assert _directive_user_origin is True
             sl.append("chunk", "partial answer", "chunk")
             await asyncio.sleep(60)
@@ -902,7 +902,7 @@ class TestApiChatMemoryModeForwarding:
         monkeypatch.setattr("kiro_crew.dashboard.state.config_dir", lambda: tmp_path)
         state = _make_state(tmp_path)
 
-        async def fake_run_chat(st, sl, msg, *, _directive_user_origin):
+        async def fake_run_chat(st, sl, msg, *, _directive_user_origin, **_kw):
             assert _directive_user_origin is True
             sl.append("chunk", "ack", "chunk")
 
@@ -931,7 +931,7 @@ class TestApiChatMemoryModeForwarding:
         monkeypatch.setattr("kiro_crew.dashboard.state.config_dir", lambda: tmp_path)
         state = _make_state(tmp_path)
 
-        async def fake_run_chat(st, sl, msg, *, _directive_user_origin):
+        async def fake_run_chat(st, sl, msg, *, _directive_user_origin, **_kw):
             assert _directive_user_origin is True
             sl.append("chunk", "ack", "chunk")
 
@@ -956,7 +956,7 @@ class TestApiChatMemoryModeForwarding:
         monkeypatch.setattr("kiro_crew.dashboard.state.config_dir", lambda: tmp_path)
         state = _make_state(tmp_path)
 
-        async def fake_run_chat(st, sl, msg, *, _directive_user_origin):
+        async def fake_run_chat(st, sl, msg, *, _directive_user_origin, **_kw):
             assert _directive_user_origin is True
             sl.append("chunk", "ack", "chunk")
 
@@ -1029,7 +1029,7 @@ class TestApiChatModeForwarding:
     """
 
     async def _post_chat(self, state, body):
-        async def fake_run_chat(st, sl, msg, *, _directive_user_origin):
+        async def fake_run_chat(st, sl, msg, *, _directive_user_origin, **_kw):
             assert _directive_user_origin is True
             sl.append("chunk", "ack", "chunk")
 
@@ -1142,7 +1142,7 @@ class TestApiChatNoBrowseMarker:
         monkeypatch.setattr("kiro_crew.dashboard.state.config_dir", lambda: tmp_path)
         state = _make_state(tmp_path)
 
-        async def fake_run_chat(st, sl, msg, *, _directive_user_origin):
+        async def fake_run_chat(st, sl, msg, *, _directive_user_origin, **_kw):
             assert _directive_user_origin is True
             sl.append("chunk", "ack", "chunk")
 
@@ -10036,7 +10036,7 @@ class TestApiChatSendReceiptMid:
         monkeypatch.setattr("kiro_crew.dashboard.state.config_dir", lambda: tmp_path)
         state = _make_state(tmp_path)
 
-        async def fake_run_chat(st, sl, msg, *, _directive_user_origin):
+        async def fake_run_chat(st, sl, msg, *, _directive_user_origin, **_kw):
             sl.append("chunk", "ack", "chunk")
 
         monkeypatch.setattr("kiro_crew.dashboard.chat_handlers._run_chat", fake_run_chat)
