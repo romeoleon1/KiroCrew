@@ -626,6 +626,17 @@ export default function MembersPage() {
     },
     [slotKeyOf, unreadSlots],
   )
+  // "Needs you": the member has an unanswered escalation. Live slot first
+  // (the slots push carries the flag as it changes), roster row as the
+  // cold-start fallback before the first slots push lands.
+  const isNeedsYou = useCallback(
+    (m: MemberRosterRow) => {
+      const key = slotKeyOf(m)
+      const live = key ? liveSlots.find((x) => x.key === key) : undefined
+      return live ? !!live.needs_you : !!m.needs_you
+    },
+    [slotKeyOf, liveSlots],
+  )
 
   // Auto patrol: the auto-nudge loop (monitor / goal loop) bound to a member's
   // own DM slot. This is the thing that wakes a standing member without anyone
@@ -1184,6 +1195,17 @@ export default function MembersPage() {
                     unread dot, with a real accessible name: nothing else on
                     the row says "unread". The left side is taken — presence
                     rides the avatar. */}
+                {isNeedsYou(m) && (
+                  <span
+                    data-testid="member-needs-you-badge"
+                    role="img"
+                    aria-label={t('pages.members.chat.needs_you')}
+                    className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0"
+                    style={{ background: 'color-mix(in srgb, var(--warn) 18%, transparent)', color: 'var(--warn)' }}
+                  >
+                    {t('pages.members.chat.needs_you')}
+                  </span>
+                )}
                 {isUnread(m) && (
                   <span
                     className="w-2 h-2 rounded-full shrink-0"
@@ -1389,6 +1411,7 @@ export default function MembersPage() {
                     agentLocked
                     frameless
                     followContentWidth
+                    displayProfile="chat"
                     // The failure notice above owns the verdict on this thread
                     // while a repair has failed; the pane's own "Session
                     // ready" would contradict it one line down.

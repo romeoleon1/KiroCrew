@@ -75,7 +75,7 @@ export const CHUNK_BUDGETS = {
   // the growth is main's accumulated English strings, and headroom is what was
   // actually missing. 5% headroom, matching the `all` entry's convention above,
   // so the next English string does not re-trip this for the third time.
-  t: 777 * KB, // measured 740 KB on main @ 1cd64b8c9 (~5% headroom)
+  t: 817 * KB, // measured 778 KB with the escalation-card strings (~5% headroom)
 
   // Pierre editor implementation (PR #4072 replaced Monaco, whose
   // 'editor.api2' chunk this entry set used to carry) -- the code-editor
@@ -102,7 +102,10 @@ export const CHUNK_BUDGETS = {
   // assumed: main's tip alone, with no PR code, reproduces the failure.
   // 5% headroom, matching the `all` and `t` entries' convention, so ordinary
   // first-party growth does not re-trip this within days.
-  App: 3360 * KB, // measured 3201 KB on main @ 701f8f981 (~5% headroom)
+  // main's tip sits 0.4 KB under the 3360 KB ceiling, so the escalation card,
+  // the member-thread chat projection and its index hook (23 KB of App code)
+  // land over it; the ceiling tracks the measured size with the same headroom.
+  App: 3550 * KB, // measured 3383 KB with the escalation surfaces (~5% headroom)
 
   // Markdown/math/syntax rendering stack (katex, highlight.js, remark/rehype)
   // -- one deliberate `manualChunks` bucket, see vite.config.ts.
