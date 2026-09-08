@@ -277,6 +277,7 @@ export default function ChatPane({
     availableModels,
     _modelsDegraded,
     paneSlot?.model_withheld,
+    paneSlot?.served_model || '',
   )
 
   // One-time hydrate of this slot's message history via React Query + the api
