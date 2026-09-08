@@ -967,7 +967,7 @@ async def _await_cron_fire_time_gate(
 
 
 async def _pre_create_cron_slot(dashboard_state: "DashboardState", job: CronJob) -> None:
-    """Pre-create the job's first-run dashboard tab (#8336), best-effort.
+    """Pre-create the job's first-run dashboard tab, best-effort.
 
     :func:`ensure_cron_slot` gives a first run its tab — and with it its
     session-control caller identity and dashboard-surface routing — before
@@ -4644,7 +4644,7 @@ class GatewayOrchestrator:
                 await _alert_cron_failure(job, gate_reason, denied=True)
                 return None
 
-            # ── First-run tab pre-create (#8336) ──
+            # ── First-run tab pre-create ──
             # The result injection at the end of this callback used to be the
             # ONLY creator site for the job's dashboard tab, so during a NEW
             # job's first run the tab did not exist: session-control caller

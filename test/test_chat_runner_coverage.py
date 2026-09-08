@@ -1278,7 +1278,7 @@ class TestFlushSegment:
 
         `redact_credentials` pass 2 substitutes `[REDACTED: encoded credential]`,
         which is not a substring of the plaintext tag. Counting only the plaintext
-        tag left this segment silently rewritten -- the same #6189 failure, just
+        tag left this segment silently rewritten -- the same failure, just
         reached by another pass.
         """
         import base64
@@ -1359,7 +1359,7 @@ class TestFlushSegment:
         assert notice["cls"] == "msg msg-info"
 
     def test_a_credential_only_notice_does_not_mention_urls(self, tmp_path):
-        """Regression guard on #8109: the credential wording is unchanged."""
+        """Regression guard: the credential wording is unchanged."""
         state, slot = _state(tmp_path), _slot()
 
         chat_runner._flush_segment(

@@ -2966,7 +2966,7 @@ class TestDispatcher:
 
     def test_compact_declined_on_auto_managed_backend(self) -> None:
         # A backend that cannot serve /compact gets the informational reply and
-        # compact() is NEVER dispatched (#8156).
+        # compact() is NEVER dispatched.
         d, cli, sess = _dispatcher({7})
         calls: list[int] = []
 
