@@ -102,7 +102,15 @@ export const CHUNK_BUDGETS = {
   // assumed: main's tip alone, with no PR code, reproduces the failure.
   // 5% headroom, matching the `all` and `t` entries' convention, so ordinary
   // first-party growth does not re-trip this within days.
-  App: 3360 * KB, // measured 3201 KB on main @ 701f8f981 (~5% headroom)
+  //
+  // Re-measured 2026-09-08 (#8852): four days of first-party growth brought
+  // main @ 6ae74179d to ~3360 KB, within ~0.5 KB of that ceiling, so the next
+  // change touching ChatPane / ChatInput / UserMessage tripped it (steer-only
+  // DM composer: ~5 KB, no new library, no lazy boundary — those components
+  // are the App chunk). Attribution measured on main's own push CI: its tip
+  // passes by under a kilobyte. Same 5% headroom convention over the new
+  // measurement.
+  App: 3535 * KB, // measured 3365 KB on main @ 6ae74179d + #8852 (~5% headroom)
 
   // Markdown/math/syntax rendering stack (katex, highlight.js, remark/rehype)
   // -- one deliberate `manualChunks` bucket, see vite.config.ts.
