@@ -2962,6 +2962,10 @@ class AcpRuntime:
 
         # Populate state from session/new response (configOptions, available models)
         handle.store_session_config(resp)
+        # Both halves of that snapshot are now known, which is what makes the
+        # served-default check answerable: the model the backend picked for
+        # this session can be one the account's partition does not serve.
+        await handle.ensure_served_default()
         # The roster this session put on the wire. Set BEFORE drain_init so the
         # report can be read as "of the N we sent, these reported" rather than
         # as a bare list of names.
