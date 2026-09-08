@@ -75,7 +75,13 @@ export const CHUNK_BUDGETS = {
   // the growth is main's accumulated English strings, and headroom is what was
   // actually missing. 5% headroom, matching the `all` entry's convention above,
   // so the next English string does not re-trip this for the third time.
-  t: 777 * KB, // measured 740 KB on main @ 1cd64b8c9 (~5% headroom)
+  // Re-measured 2026-09-08 at 777.1 KB on main @ 50cc659de + PR #9428 (66 B
+  // over the 777 KB ceiling set four days earlier): main's tip alone
+  // (@ 6ae74179d) builds `t` to ~520 B under that ceiling — the English
+  // catalog consumed the whole 5% in that window — and #9428's ten
+  // member-filter strings add ~590 B, which is the overshoot. Same convention,
+  // re-based on the new measurement.
+  t: 816 * KB, // measured 777 KB on main @ 50cc659de + #9428 (~5% headroom)
 
   // Pierre editor implementation (PR #4072 replaced Monaco, whose
   // 'editor.api2' chunk this entry set used to carry) -- the code-editor
@@ -102,7 +108,13 @@ export const CHUNK_BUDGETS = {
   // assumed: main's tip alone, with no PR code, reproduces the failure.
   // 5% headroom, matching the `all` and `t` entries' convention, so ordinary
   // first-party growth does not re-trip this within days.
-  App: 3360 * KB, // measured 3201 KB on main @ 701f8f981 (~5% headroom)
+  // Re-measured 2026-09-08 at 3360.1 KB on main @ 50cc659de + PR #9428 (67 B
+  // over the 3360 KB ceiling): main's tip alone (@ 6ae74179d) builds App to
+  // 373 B under that ceiling — first-party code grew the full 5% in four days —
+  // and #9428's shared list-shell / search-bar / roster-filter modules add
+  // ~440 B, which is the overshoot. Same convention, re-based on the new
+  // measurement.
+  App: 3528 * KB, // measured 3360 KB on main @ 50cc659de + #9428 (~5% headroom)
 
   // Markdown/math/syntax rendering stack (katex, highlight.js, remark/rehype)
   // -- one deliberate `manualChunks` bucket, see vite.config.ts.
