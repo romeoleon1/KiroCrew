@@ -38,32 +38,6 @@ def _manifest() -> dict:
 # --- manifest platform declaration ---
 
 
-def test_manifest_declares_every_platform_the_app_runs_on():
-    """`platform.os` summarises the whole app.
-
-    Windows is deliberately withheld here (`_PLATFORM_EXCLUSIONS` in
-    `test/test_builtin_app_platform_declarations.py`): this app spawns a
-    backend child process, and that process's Windows behaviour has not been
-    verified on a native Windows host in this change, even though the pure
-    logic this file tests (port discovery from log output, dev-log parsing)
-    already runs correctly there.
-    """
-    assert _manifest()["platform"]["os"] == ["macos", "linux"]
-
-
-def test_declared_platforms_all_resolve_to_a_real_sys_platform():
-    """Every declared name must map to a sys.platform value.
-
-    An unmapped name is silently accepted into the list and then never matches,
-    so a declaration can claim a platform the gate rejects.
-    """
-    from kiro_crew.apps.manifest import PlatformConfig
-
-    cfg = PlatformConfig(os=_manifest()["platform"]["os"])
-    for sys_platform in ("darwin", "linux"):
-        assert cfg.supports_platform(sys_platform), sys_platform
-
-
 # --- port discovery from the dev server's own output ---
 
 

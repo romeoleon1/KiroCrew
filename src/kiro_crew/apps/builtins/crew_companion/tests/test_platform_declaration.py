@@ -26,35 +26,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from kiro_crew.apps.manifest import PlatformConfig
-
 # repo_root/src/kiro_crew/apps/builtins/crew_companion/tests/<this file>
 _APP_JSON = Path(__file__).resolve().parents[1] / "app.json"
 
 
 def _raw() -> dict:
     return json.loads(_APP_JSON.read_text(encoding="utf-8"))
-
-
-def test_manifest_declares_every_platform_the_app_runs_on() -> None:
-    """The app runs wherever the desktop shell does, so all three are declared.
-
-    Pinned because both narrower answers misinform: dropping ``windows`` reads
-    as "does not run on Windows", and omitting ``platform.os`` entirely inherits
-    the implicit macOS+Linux default with the same effect.
-    """
-    assert _raw()["platform"]["os"] == ["macos", "linux", "windows"]
-
-
-def test_declared_platforms_all_resolve_to_a_real_sys_platform() -> None:
-    """Every declared name must map to a ``sys.platform`` value.
-
-    An unmapped name is accepted into the list and then never matches, so a
-    declaration can claim a platform the gate actually rejects.
-    """
-    cfg = PlatformConfig(os=_raw()["platform"]["os"])
-    for sys_platform in ("darwin", "linux", "win32"):
-        assert cfg.supports_platform(sys_platform), sys_platform
 
 
 def test_desktop_app_requirement_is_independent_of_the_os_list() -> None:

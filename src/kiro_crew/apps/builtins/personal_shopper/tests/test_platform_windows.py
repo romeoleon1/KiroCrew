@@ -31,7 +31,6 @@ from aiohttp import web
 
 from kiro_crew.apps.builtins.personal_shopper.backend import routes as routes_mod
 from kiro_crew.apps.builtins.personal_shopper.backend.store import PreferenceStore
-from kiro_crew.apps.manifest import PlatformConfig
 
 _DECLARED_OS = ["macos", "linux", "windows"]
 
@@ -40,27 +39,6 @@ def _manifest() -> dict:
     """Read the app manifest the same way the app loader does."""
     path = Path(routes_mod.__file__).resolve().parents[1] / "app.json"
     return json.loads(path.read_text(encoding="utf-8"))
-
-
-class TestManifestPlatformDeclaration(unittest.TestCase):
-    def test_manifest_declares_every_platform_the_app_runs_on(self) -> None:
-        """Pinned because both narrower answers misinform.
-
-        Naming fewer platforms reads as "does not run there", and omitting the
-        block altogether falls back to the implicit ``["macos", "linux"]``
-        default, which silently drops Windows.
-        """
-        self.assertEqual(_manifest()["platform"]["os"], _DECLARED_OS)
-
-    def test_declared_platforms_all_resolve_to_a_real_sys_platform(self) -> None:
-        """Every declared name must map to a ``sys.platform`` value.
-
-        An unmapped name is accepted into the list and then never matches, so a
-        declaration can claim a platform the gate still rejects.
-        """
-        cfg = PlatformConfig(os=_manifest()["platform"]["os"])
-        for sys_platform in ("darwin", "linux", "win32"):
-            self.assertTrue(cfg.supports_platform(sys_platform), sys_platform)
 
 
 class TestStoreHandlesAreReleasedOnShutdown(unittest.IsolatedAsyncioTestCase):

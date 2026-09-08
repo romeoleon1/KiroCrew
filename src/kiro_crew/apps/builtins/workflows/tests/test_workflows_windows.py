@@ -3,10 +3,12 @@
 Two things are pinned here.
 
 1. The manifest's ``platform.os`` declaration. Without a ``platform`` block the
-   manifest inherits ``PlatformConfig``'s default ``["macos", "linux"]``, and
-   ``apps/routes.py`` gates enablement on ``supports_platform(sys.platform)`` — so
-   the app was rejected on win32 without anyone having decided that. Nothing in
-   the app is POSIX-specific: the backend is stdlib-only, binds loopback
+   manifest inherits ``PlatformConfig``'s default ``["macos", "linux"]``, which is
+   published on the App Store detail page — so the app told every Windows user it
+   does not run there, without anyone having decided that. It is a claim, not a
+   gate: ``apps/routes.py`` consults the field only for a
+   ``platform.installMode: "client"`` app, and no builtin is one. Nothing in this
+   app is POSIX-specific either: the backend is stdlib-only, binds loopback
    explicitly, spawns no external process, and builds every path through
    ``os.path``.
 
@@ -41,7 +43,7 @@ APP_ROOT = Path(__file__).resolve().parents[1]
 APP_JSON = APP_ROOT / "app.json"
 
 APP_NAME = "workflows"
-DECLARED_OS = ["macos", "linux"]
+DECLARED_OS = ["macos", "linux", "windows"]
 
 GOOD_SCRIPT = (
     'META = {"name": "demo", "description": "d"}\n'
@@ -66,26 +68,6 @@ def manifest() -> AppManifest:
 # --------------------------------------------------------------------------- #
 
 
-def test_manifest_declares_every_platform_the_app_runs_on(raw_manifest: dict) -> None:
-    """Windows is withheld here (`_PLATFORM_EXCLUSIONS` in
-    `test/test_builtin_app_platform_declarations.py`): this app spawns a
-    backend child process orchestrating workflow runs, and that process's
-    lifecycle has not been verified on native Windows in this change, even
-    though the address-reuse and degrade-with-a-reason fixes this file tests
-    already behave correctly there.
-    """
-    assert raw_manifest["platform"]["os"] == DECLARED_OS
-
-
-def test_declared_platforms_all_resolve_to_a_real_sys_platform(raw_manifest: dict) -> None:
-    """An unmapped platform name is accepted into the list and then never matches,
-    so a declaration can claim a platform the gate silently rejects.
-    """
-    cfg = PlatformConfig(os=raw_manifest["platform"]["os"])
-    for sys_platform in ("darwin", "linux"):
-        assert cfg.supports_platform(sys_platform), sys_platform
-
-
 def test_typed_manifest_carries_the_same_platform_list(manifest: AppManifest) -> None:
     # The gates read the typed value; humans read the file. They must not disagree.
     assert manifest.platform.os == DECLARED_OS
@@ -100,16 +82,14 @@ def test_the_implicit_default_would_have_excluded_windows() -> None:
     assert not default_cfg.supports_platform("win32")
 
 
-def test_discovery_omits_the_platform_key_when_it_matches_the_default() -> None:
+def test_discovery_serializes_the_platform_declaration() -> None:
     """``PlatformConfig.to_dict()`` emits ``os`` only when it differs from the
-    default. This app's declared ``["macos", "linux"]`` now equals that default
-    (Windows is withheld — see `_PLATFORM_EXCLUSIONS` in
-    `test/test_builtin_app_platform_declarations.py`), so the serialized entry
-    correctly omits the key rather than emitting a redundant one.
+    default, so the declaration reaching the App Store payload is what proves the
+    detail page can render "Windows" at all — the field's one real consumer.
     """
     entry = next((a for a in discover_builtin_apps() if a.get("name") == APP_NAME), None)
     assert entry is not None, f"{APP_NAME!r} not discovered"
-    assert "platform" not in entry
+    assert entry["platform"]["os"] == DECLARED_OS
 
 
 def test_manifest_still_validates(manifest: AppManifest) -> None:

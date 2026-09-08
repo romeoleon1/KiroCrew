@@ -57,19 +57,6 @@ def _new_campaign() -> str:
 # --- manifest platform declaration ---
 
 
-def test_manifest_declares_every_platform_the_app_runs_on():
-    """``platform.os`` must name all three platforms.
-
-    This app is pure Python + aiohttp + sqlite3: no subprocess, no POSIX-only
-    API, no hardcoded POSIX path, and all path work goes through pathlib. There
-    is nothing platform-specific left to exclude, so omitting the block (which
-    silently means "macOS and Linux only") would misreport the app as unusable
-    on Windows.
-    """
-    manifest = json.loads(APP_JSON.read_text(encoding="utf-8"))
-    assert manifest["platform"]["os"] == DECLARED_OS
-
-
 def test_manifest_still_validates_with_the_platform_block():
     """The typed loader must accept the added block.
 
@@ -84,20 +71,6 @@ def test_manifest_still_validates_with_the_platform_block():
     assert manifest.validate(app_root=APP_ROOT) == []
     assert manifest.name == "auto-research"
     assert "auto-research" in [a.get("name") for a in discover_builtin_apps()]
-
-
-def test_declared_platforms_all_resolve_to_a_real_sys_platform():
-    """Every declared name must map to a sys.platform value.
-
-    An unmapped name is accepted into the list and then never matches, so a
-    declaration can claim a platform the gate still rejects.
-    """
-    from kiro_crew.apps.manifest import PlatformConfig
-
-    manifest = json.loads(APP_JSON.read_text(encoding="utf-8"))
-    cfg = PlatformConfig(os=manifest["platform"]["os"])
-    for sys_platform in ("darwin", "linux", "win32"):
-        assert cfg.supports_platform(sys_platform), sys_platform
 
 
 # --- the encoding regression gate ---

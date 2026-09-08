@@ -30,29 +30,6 @@ def _manifest() -> dict[str, Any]:
     return json.loads(_APP_JSON.read_text(encoding="utf-8"))
 
 
-def test_manifest_declares_every_platform_the_app_runs_on() -> None:
-    """The declaration must be explicit, and must name all three.
-
-    Both narrower answers misinform: omitting the block falls back to the implicit
-    ``["macos", "linux"]`` default, which silently drops Windows, and naming only
-    ``windows`` would read as "does not run on macOS".
-    """
-    assert _manifest()["platform"]["os"] == _DECLARED_OS
-
-
-def test_declared_platforms_all_resolve_to_a_real_sys_platform() -> None:
-    """Every declared name must map to a sys.platform value.
-
-    An unmapped name is accepted into the list and then never matches, so a declaration
-    can claim a platform the gate rejects.
-    """
-    from kiro_crew.apps.manifest import PlatformConfig
-
-    cfg = PlatformConfig(os=_manifest()["platform"]["os"])
-    for sys_platform in ("darwin", "linux", "win32"):
-        assert cfg.supports_platform(sys_platform), sys_platform
-
-
 def test_windows_admission_rests_on_the_app_contributing_no_host_side_code() -> None:
     """Why declaring ``windows`` is safe rather than optimistic.
 
