@@ -590,6 +590,7 @@ class TestDoctorKas:
     def test_engine_supported_prints_the_relay_argv(self, monkeypatch, capsys) -> None:
         self._patch_cfg(monkeypatch, "kas")
         monkeypatch.setattr(cli_doctor, "resolve_kiro_cli", lambda: "/x/kiro-cli")
+        monkeypatch.setattr(cli_doctor, "vault_holds_identity", lambda: False)
         monkeypatch.setattr(
             cli_doctor,
             "_kas_relay_help",
@@ -600,7 +601,27 @@ class TestDoctorKas:
         out = capsys.readouterr().out
         # The exact invocation, so a reader can reproduce it by hand.
         assert "acp --agent-engine v3 --auth-method cli" in out
+        assert "auth owner:  kiro-cli credential store" in out
         assert "✅ v3 supported" in out
+        assert issues == []
+
+    def test_crew_sign_in_prints_the_crew_owned_argv(self, monkeypatch, capsys) -> None:
+        """With an identity in Crew's vault the reported argv drops the flag and
+        names Crew as the auth owner -- the same decision the runtime makes."""
+        self._patch_cfg(monkeypatch, "kas")
+        monkeypatch.setattr(cli_doctor, "resolve_kiro_cli", lambda: "/x/kiro-cli")
+        monkeypatch.setattr(cli_doctor, "vault_holds_identity", lambda: True)
+        monkeypatch.setattr(
+            cli_doctor,
+            "_kas_relay_help",
+            lambda _binary: "--agent-engine <ENGINE>  v1, v2 (default), or v3",
+        )
+        issues: list[str] = []
+        cli_doctor._doctor_kas(issues)
+        out = capsys.readouterr().out
+        assert "acp --agent-engine v3\n" in out
+        assert "--auth-method" not in out
+        assert "auth owner:  Kiro Crew vault" in out
         assert issues == []
 
     def test_engine_missing_appends_issue(self, monkeypatch, capsys) -> None:

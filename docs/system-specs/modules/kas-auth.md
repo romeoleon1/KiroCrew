@@ -1,10 +1,14 @@
 # KAS-Mode Auth Module
 
-> Status: implemented (pre-integration). The auth subsystem exists under
-> `src/kiro_crew/auth/` with unit tests; it is not yet wired into a live KAS-embedded
-> runtime (that runtime does not exist in this tree — `bridge.py` is the seam it will
-> bind to). Until KAS mode ships, `agent.provider` remains `acp` and kiro-cli owns
-> login; this spec describes what replaces that dependency.
+> Status: implemented and wired to the KAS relay. The auth subsystem lives under
+> `src/kiro_crew/auth/` with unit tests. Its runtime consumer is
+> `src/kiro_crew/acp/kas_host_auth.py`: when the vault holds an identity, the KAS
+> backend spawns `kiro-cli acp --agent-engine v3` WITHOUT `--auth-method cli`, so the
+> engine's `_kiro/auth/getAccessToken` request reaches Kiro Crew, and `AcpRuntime`
+> answers it from `KasAuthProvider.get_access_token_callback()`. With no identity
+> stored the spawn keeps `--auth-method cli` and kiro-cli owns login exactly as
+> before. kiro-cli remains the ACP service either way; Crew never spawns the KAS
+> bundle itself.
 
 ## Why this exists
 
@@ -270,5 +274,9 @@ access token.
   begin/poll routes. A desktop (loopback-transport) sign-in therefore has no server
   entry point yet; the chooser must force device transport, or a begin-loopback route
   must land, before the loopback path is wired into the app root.
-- Wiring `KasAuthProvider` into an actual embedded-KAS runtime (the runtime and its ACP
-  bridge do not exist in this tree yet; `bridge.py` is the seam).
+- Wiring `KasAuthProvider` to the running engine is done through the kiro-cli relay
+  (`acp/kas_host_auth.py` + the `_kiro/auth/getAccessToken` handler on
+  `AcpRuntime`'s reader loop). Still open on that path: retiring a Crew-owned KAS
+  process on a Crew sign-out (today the next callback errors `not signed in`, which
+  the engine turns into its sign-in prompt) and mounting `KasLoginGate` at the app
+  root.

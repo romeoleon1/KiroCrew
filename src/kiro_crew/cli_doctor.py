@@ -22,6 +22,7 @@ from kiro_crew import agent as _agent
 from kiro_crew import agent_state, dep_sync, diagnostics, platform_compat, sandbox, stt
 from kiro_crew._bootstrap import _source_checkout_root
 from kiro_crew.acp.client import KIRO_CLI_BIN
+from kiro_crew.acp.kas_host_auth import vault_holds_identity
 from kiro_crew.acp.kas_transport import (
     KAS_RELAY_ENGINE,
     KAS_RELAY_ENGINE_FLAG,
@@ -2373,7 +2374,19 @@ def _report_kas_backend(issues: list[str]) -> None:
         issues.append("KAS backend selected but kiro-cli is not installed")
         return
 
-    print(f"  relay:       ✅ {' '.join(build_kas_argv(binary))}")
+    # Same decision the runtime makes at spawn: Crew owns auth when its own
+    # vault holds an identity, kiro-cli otherwise. Reported so the operator sees
+    # which credential the next KAS process will actually draw on.
+    host_auth = vault_holds_identity()
+    print(f"  relay:       ✅ {' '.join(build_kas_argv(binary, host_auth=host_auth))}")
+    print(
+        "  auth owner:  "
+        + (
+            "Kiro Crew vault (signed in through Kiro Crew)"
+            if host_auth
+            else "kiro-cli credential store (--auth-method cli)"
+        )
+    )
     help_text = _kas_relay_help(binary)
     if help_text is None:
         # The probe itself failed, so nothing is known either way. Advisory: a

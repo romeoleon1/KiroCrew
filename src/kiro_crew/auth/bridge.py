@@ -11,8 +11,10 @@ Where the auth module meets the embedded KAS engine. KAS consumes auth one of tw
   resolveRequestCredential), for the in-process library injection path
   (``KiroAgentOptions.authProvider``).
 
-The embedded-KAS runtime does not exist in this tree yet; this is the stable seam it
-will bind to, kept real and tested so wiring KAS later is a call, not a rewrite.
+The acp-callback half is live: :mod:`kiro_crew.acp.kas_host_auth` calls
+``handle_get_access_token`` when the KAS relay is spawned with Crew as auth owner.
+The library-injection half has no consumer in this tree yet; it is kept real and
+tested so an embedded-KAS host later is a call, not a rewrite.
 """
 
 from __future__ import annotations
