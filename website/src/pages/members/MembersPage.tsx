@@ -81,6 +81,15 @@ import { safeGetItem, safeSetItem } from '../../utils/safeStorage'
  *  The explicit tab wins over CapabilitiesPage's remembered last tab. */
 const CREW_MANAGER_PATH = '/capabilities?tab=crews'
 
+/** Adding a member IS creating a crew, so "add" is a navigation into the crew
+ *  manager — but straight into its create form (`?new=1`), not onto the list
+ *  the form sits behind: the user pressed "+", and a second "New crew" click
+ *  was the whole complaint (#9513). `from=members` tells the manager where the
+ *  user came from, so a successful create lands on the new member's thread
+ *  here instead of back on the crew list. Spelled out in full (not built from
+ *  CREW_MANAGER_PATH) so the i18n lint reads it as the route it is. */
+const CREW_CREATE_PATH = '/capabilities?tab=crews&new=1&from=members'
+
 /** One member's editor, reached THROUGH the crew manager: the deep link opens
  *  that crew's full editor — name, template, model, workspace, triggers, and
  *  the avatar row that leads on to the builder (see KiroCrewAgentsPage's
@@ -850,6 +859,12 @@ export default function MembersPage() {
         setGone((prev) => (prev && prev.shown !== hit.name ? null : prev))
         return
       }
+      // Named but not (yet) on the roster while a refetch is in flight: a link
+      // may simply have outrun the cache — the crew manager's create lands
+      // here with the just-made member's name before the invalidated roster
+      // has re-read (#9513). Hold the "gone" verdict until the fetch answers;
+      // a member the fresh roster still lacks takes the fallback then.
+      if (rosterQuery.isFetching) return
     }
     if (isMobile) {
       if (urlMember) {
@@ -877,7 +892,7 @@ export default function MembersPage() {
       goneStandInRef.current = target.name
     }
     setSearchParams({ [MEMBER_PARAM]: target.name }, { replace: true })
-  }, [loaded, loadError, urlMember, members, orderedMembers, activeName, isMobile, activate, setSearchParams])
+  }, [loaded, loadError, urlMember, members, orderedMembers, activeName, isMobile, activate, setSearchParams, rosterQuery.isFetching])
 
   return (
     // pb-2 on the root is the one shared bottom inset: the card columns and
@@ -909,9 +924,10 @@ export default function MembersPage() {
           <Users size={15} className="lucide-inline text-muted" />
           <h1 className="text-sm font-semibold flex-1">{t('pages.membersPage.title')}</h1>
           {/* Adding a member IS creating a crew, and the crew manager is the
-              only write path — so this is a navigation, not an inline form. */}
+              only write path — so this is a navigation, not an inline form.
+              It lands ON the create form, not on the crew list (#9513). */}
           <button
-            onClick={() => navigate(CREW_MANAGER_PATH)}
+            onClick={() => navigate(CREW_CREATE_PATH)}
             className="flex items-center justify-center w-7 h-7 rounded-md transition-colors bg-transparent border-none shrink-0 text-muted hover:text-text hover:bg-bg-hover cursor-pointer"
             aria-label={t('pages.membersPage.add_member')}
             title={t('pages.membersPage.add_member')}
@@ -1032,14 +1048,15 @@ export default function MembersPage() {
           {loaded && !loadError && members.length === 0 && (
             <li className="px-4 py-6 text-xs text-muted">
               <p>{t('pages.membersPage.empty_roster')}</p>
-              {/* The copy names the crew manager; give it the way there. */}
+              {/* The copy says "create a crew"; give it the way there — the
+                  create form itself, same destination as the header "+". */}
               <button
-                onClick={() => navigate(CREW_MANAGER_PATH)}
+                onClick={() => navigate(CREW_CREATE_PATH)}
                 className="mt-2 inline-flex items-center gap-1 text-[11.5px] px-2 py-1 rounded border border-border hover:bg-accent/40"
                 data-testid="member-empty-cta"
               >
-                <Pencil size={12} className="lucide-inline" />
-                {t('pages.membersPage.edit_in_crew_manager')}
+                <UserPlus size={12} className="lucide-inline" />
+                {t('pages.membersPage.add_member')}
               </button>
             </li>
           )}

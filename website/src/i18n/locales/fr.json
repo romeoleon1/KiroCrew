@@ -10671,6 +10671,7 @@
     },
     "kiroCrewAgentsPage": {
       "a_unique_identifier_for_this_workspace_agents_re": "Un identifiant unique pour cet espace de travail. Les agents référencent les espaces de travail par leur nom.",
+      "add_crew_member": "Ajouter un membre à l'équipe",
       "additional_stores_coming_with_memory_v2": "Seul le magasin par défaut est disponible pour l’instant ; la prise en charge d’autres magasins de mémoire arrive bientôt.",
       "agent_template_is_required": "Le modèle d'agent est obligatoire",
       "agents": "Agents",
@@ -14378,7 +14379,7 @@
       "details": "Détails",
       "edit_in_crew_manager": "Modifier dans le gestionnaire d'équipes",
       "edit_member": "Modifier le membre",
-      "empty_roster": "Aucun membre pour l'instant. Créez une équipe dans le gestionnaire pour la voir ici.",
+      "empty_roster": "Aucun membre pour l'instant.",
       "inherited": "Hérité",
       "member_count_many": "{{count}} membres",
       "member_count_one": "{{count}} membre",

@@ -10365,6 +10365,7 @@
     },
     "kiroCrewAgentsPage": {
       "a_unique_identifier_for_this_workspace_agents_re": "이 워크스페이스의 고유 식별자입니다. 에이전트는 이름으로 워크스페이스를 참조합니다.",
+      "add_crew_member": "크루 멤버 추가",
       "additional_stores_coming_with_memory_v2": "현재는 기본 저장소만 사용할 수 있습니다 — 더 많은 메모리 저장소 지원이 곧 제공됩니다.",
       "agent_template_is_required": "에이전트 템플릿은 필수입니다",
       "agents": "에이전트",
@@ -14011,7 +14012,7 @@
       "details": "상세",
       "edit_in_crew_manager": "크루 관리 페이지에서 편집",
       "edit_member": "멤버 편집",
-      "empty_roster": "아직 크루 멤버가 없습니다. 크루 관리 페이지에서 만들면 여기에 표시됩니다.",
+      "empty_roster": "아직 크루 멤버가 없습니다.",
       "inherited": "상속됨",
       "member_count_other": "멤버 {{count}}명",
       "member_gone": "{{shown}}을(를) 표시합니다. '{{name}}'은(는) 더 이상 명단에 없습니다.",

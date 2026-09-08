@@ -77,7 +77,10 @@ interface AgentUpdatePayload {
 const INHERIT_MODEL = 'auto'
 
 /** Which crew the editor dialog is pointed at. `null` = closed. */
-type SheetTarget = { mode: 'create' } | { mode: 'edit'; name: string } | null
+/** `origin` records WHERE a create was asked for: the Crew Members roster's
+ *  "+" sends the user here (#9513), and that origin titles the form in the
+ *  roster's own vocabulary and takes the user back there when it closes. */
+type SheetTarget = { mode: 'create'; origin?: 'members' } | { mode: 'edit'; name: string } | null
 
 /** Roster layout. `cards` is the roomy grid, `list` the compact table. */
 type CrewView = 'cards' | 'list'
@@ -841,15 +844,18 @@ export default function KiroCrewAgentsPage({ embedded }: { embedded?: boolean } 
     : modelPinPendingClear ? '' : (resolved?.model || '')
   const effortCapable = modelSupportsEffort(effortModel)
 
-  const openCreate = useCallback(() => {
+  const openCreateFrom = useCallback((origin?: 'members') => {
     sheetEpoch.current += 1
     setError(''); setSheetHint('')
     setConfirmDelete(false)
     setName(''); setKiroAgent(''); setWorkspace('default'); setMemoryStore('default')
     setTriggers('')
     setSessionColor('')
-    setSheet({ mode: 'create' })
+    setSheet(origin ? { mode: 'create', origin } : { mode: 'create' })
   }, [])
+  /** The page's own "New crew" entries: no origin, the form closes back onto
+   *  this list. Argument-free so a click event is never mistaken for one. */
+  const openCreate = useCallback(() => openCreateFrom(), [openCreateFrom])
 
   const openEdit = useCallback((a: KiroCrewAgent) => {
     sheetEpoch.current += 1
@@ -918,7 +924,47 @@ export default function KiroCrewAgentsPage({ embedded }: { embedded?: boolean } 
     }, { replace: true })
   }, [linkedCrew, linkedAvatar, agentsData, agents, openEdit, setParams])
 
-  const closeSheet = useCallback(() => { sheetEpoch.current += 1; setSheet(null); setError(''); setSheetHint(''); setConfirmDelete(false) }, [])
+  /**
+   * Deep link: `?new=1` opens the editor in create mode straight away. This is
+   * the Crew Members page's "add a member" entry (#9513): adding a member IS
+   * creating a crew, and this page is the single write path — so the roster
+   * sends the user here, but to the form, not to the list the form is behind.
+   * Unlike `?crew=` nothing here waits on the roster: the create form has no
+   * saved record to load. Latched once, then stripped from the URL for the
+   * same reason as `?crew=`: a reload or Back must not re-open a closed form.
+   *
+   * `&from=members` records WHERE the user came from. It rides on the sheet
+   * state (`origin`) so it survives the param being stripped and outlives
+   * exactly as long as the form: it titles the form in the roster's own words
+   * ("Add crew member", not "Create Agent" — the roster never says the two are
+   * one thing), and it decides where the form CLOSES to — the new member's
+   * thread after a create, the roster after a cancel. Without it a cancel
+   * would strand the user on a crew list they never asked to visit.
+   */
+  const linkedNew = params.get('new') === '1'
+  const linkedFromMembers = params.get('from') === 'members'
+  useEffect(() => {
+    if (!linkedNew) return
+    openCreateFrom(linkedFromMembers ? 'members' : undefined)
+    setParams(prev => {
+      const next = new URLSearchParams(prev)
+      next.delete('new'); next.delete('from')
+      return next
+    }, { replace: true })
+  }, [linkedNew, linkedFromMembers, openCreateFrom, setParams])
+
+  const fromMembers = sheet?.mode === 'create' && sheet.origin === 'members'
+
+  /** Reset the panel's state. Where the user LANDS afterwards is the caller's
+   *  decision: `closeSheet` (dismissal, or a finished write on this page's own
+   *  form) stays here; the Members-origin create answers with the roster. */
+  const dismissSheet = useCallback(() => { sheetEpoch.current += 1; setSheet(null); setError(''); setSheetHint(''); setConfirmDelete(false) }, [])
+  const closeSheet = useCallback(() => {
+    dismissSheet()
+    // Asked for from the Crew Members roster and closed without a create:
+    // back to the roster, not left on the crew list behind the form.
+    if (fromMembers) navigate('/members')
+  }, [dismissSheet, fromMembers, navigate])
 
   /**
    * The pending answer to a discard question that is on screen, as a promise
@@ -977,7 +1023,19 @@ export default function KiroCrewAgentsPage({ embedded }: { embedded?: boolean } 
 
   const createMut = useMutation({
     mutationFn: ({ epoch: _epoch, ...data }: CreatePayload & { epoch: number }) => api.createKirocrewAgent(data),
-    onSuccess: (r: AgentMutationResult, vars) => { settleFor(vars.epoch, r.error); refetchAgents() },
+    onSuccess: (r: AgentMutationResult, vars) => {
+      refetchAgents()
+      // The Members roster sent the user here to add a member; the member now
+      // exists, so the next step they want is its thread, not the crew list.
+      // Only for the panel the write was fired from (see settleFor). Exact
+      // name, not slug — MembersPage's `?member=` resolves by name.
+      if (fromMembers && !r.error && vars.epoch === sheetEpoch.current) {
+        dismissSheet()
+        navigate(`/members?member=${encodeURIComponent(vars.name)}`)
+        return
+      }
+      settleFor(vars.epoch, r.error)
+    },
     onError: (e: Error, vars) => settleFor(vars.epoch, e.message || i18nT('pages.kiroCrewAgentsPage.failed_to_create_agent')),
   })
   const updateMut = useMutation({
@@ -1662,7 +1720,12 @@ export default function KiroCrewAgentsPage({ embedded }: { embedded?: boolean } 
              accessible name on its own — it has to say what you are doing to it.
              An explicit aria-label outranks Radix's aria-labelledby, and the
              DialogTitle still has to EXIST or Radix warns. */
-          aria-label={creating ? i18nT('pages.kiroCrewAgentsPage.create_a_new_crew') : i18nT('pages.kiroCrewAgentsPage.edit_crew_named', { name: editing })}
+          /* Asked for from the Crew Members roster, the form speaks that
+             page's vocabulary: "Add crew member", the action the user pressed,
+             not "Create Agent" — the app never says the two are one thing. */
+          aria-label={creating
+            ? (fromMembers ? i18nT('pages.kiroCrewAgentsPage.add_crew_member') : i18nT('pages.kiroCrewAgentsPage.create_a_new_crew'))
+            : i18nT('pages.kiroCrewAgentsPage.edit_crew_named', { name: editing })}
           /* Radix closes on an outside pointerdown and on Escape. Dismissing
              mid-write is DELIBERATELY still allowed: the sheetEpoch/settleFor
              machinery below exists to make the abandoned write land harmlessly,
@@ -1700,7 +1763,7 @@ export default function KiroCrewAgentsPage({ embedded }: { embedded?: boolean } 
                 </CrewAvatarButton>
               )}
               <DialogTitle className="font-mono">
-                {creating ? i18nT('pages.kiroCrewAgentsPage.create_agent') : editing}
+                {creating ? (fromMembers ? i18nT('pages.kiroCrewAgentsPage.add_crew_member') : i18nT('pages.kiroCrewAgentsPage.create_agent')) : editing}
               </DialogTitle>
               {!creating && editingAgent?.source && <SourceBadge source={editingAgent.source} />}
             </div>

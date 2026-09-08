@@ -10365,6 +10365,7 @@
     },
     "kiroCrewAgentsPage": {
       "a_unique_identifier_for_this_workspace_agents_re": "此工作区的唯一标识符。代理通过名称引用工作区。",
+      "add_crew_member": "添加团队成员",
       "additional_stores_coming_with_memory_v2": "目前仅提供默认存储，更多记忆存储即将推出。",
       "agent_template_is_required": "Agent 模板为必填项",
       "agents": "代理",
@@ -14011,7 +14012,7 @@
       "details": "详情",
       "edit_in_crew_manager": "在团队管理页中编辑",
       "edit_member": "编辑成员",
-      "empty_roster": "还没有团队成员。在团队管理页创建一个 crew 后会显示在这里。",
+      "empty_roster": "还没有团队成员。",
       "inherited": "继承",
       "member_count_other": "{{count}} 位成员",
       "member_gone": "已改为显示 {{shown}}——“{{name}}”已不在成员列表中。",

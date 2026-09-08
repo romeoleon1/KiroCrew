@@ -93,7 +93,12 @@ function createTestStore() {
  *  param was consumed (stripped) rather than left to re-fire on every render. */
 function LocationProbe() {
   const loc = useLocation()
-  return <span data-testid="location-search">{loc.search}</span>
+  return (
+    <>
+      <span data-testid="location-pathname">{loc.pathname}</span>
+      <span data-testid="location-search">{loc.search}</span>
+    </>
+  )
 }
 
 function renderPage(route = '/') {
@@ -1075,6 +1080,64 @@ describe('avatar editor entry — discoverability (issue #9103)', () => {
     await waitFor(() => expect(screen.getAllByTestId('crew-card')).toHaveLength(2))
     await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(/^\?tab=crews$/))
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('deep link ?new=1 opens the create form directly, then strips the param', async () => {
+    renderPage('/capabilities?tab=crews&new=1')
+    // A "New crew" deep link with no origin is this page's own form.
+    await screen.findByRole('dialog', { name: 'Create a new agent' })
+    // Consumed: closing the form must not re-open it on the next render, and
+    // Back must not land on a form the user already left.
+    await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(/^\?tab=crews$/))
+  })
+
+  it('?new=1&from=members titles the form in the roster\'s words and strips both params', async () => {
+    renderPage('/capabilities?tab=crews&new=1&from=members')
+    // The Members roster's "+" lands HERE — on the form, not on the list a
+    // second "New crew" click would be needed on (#9513) — and the form says
+    // what the user pressed ("Add crew member"), not "Create Agent".
+    await screen.findByRole('dialog', { name: 'Add crew member' })
+    expect(screen.getByRole('heading', { name: 'Add crew member' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(/^\?tab=crews$/))
+  })
+
+  it('cancelling a create that arrived from the Members roster returns to the roster', async () => {
+    renderPage('/capabilities?tab=crews&new=1&from=members')
+    const sheet = await screen.findByRole('dialog', { name: 'Add crew member' })
+    await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(/^\?tab=crews$/))
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Cancel' }))
+    // Not stranded on a crew list the user never asked to visit.
+    await waitFor(() => expect(screen.getByTestId('location-pathname')).toHaveTextContent('/members'))
+    expect(screen.getByTestId('location-search')).toHaveTextContent(/^$/)
+  })
+
+  it('a create that arrived via ?new=1&from=members lands on the new member\'s thread', async () => {
+    renderPage('/capabilities?tab=crews&new=1&from=members')
+    const sheet = await screen.findByRole('dialog', { name: 'Add crew member' })
+    const user = userEvent.setup()
+    await user.type(within(sheet).getByPlaceholderText('e.g. oncall'), 'staging')
+    const template = within(sheet).getByRole('combobox', { name: 'Agent Template' })
+    fireEvent.keyDown(template, { key: 'ArrowDown' })
+    fireEvent.click(await screen.findByRole('option', { name: 'oncall-agent' }))
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Create' }))
+    await waitFor(() => expect(mockApi.createKirocrewAgent).toHaveBeenCalled())
+    // Exact name in `?member=` — MembersPage resolves by name, not slug.
+    await waitFor(() => expect(screen.getByTestId('location-pathname')).toHaveTextContent('/members'))
+    expect(screen.getByTestId('location-search')).toHaveTextContent(/^\?member=staging$/)
+  })
+
+  it('a create from this page\'s own "New crew" button stays on the crew list', async () => {
+    await renderRoster()
+    const sheet = await openCreate()
+    const user = userEvent.setup()
+    await user.type(within(sheet).getByPlaceholderText('e.g. oncall'), 'staging')
+    const template = within(sheet).getByRole('combobox', { name: 'Agent Template' })
+    fireEvent.keyDown(template, { key: 'ArrowDown' })
+    fireEvent.click(await screen.findByRole('option', { name: 'oncall-agent' }))
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Create' }))
+    await waitFor(() => expect(mockApi.createKirocrewAgent).toHaveBeenCalled())
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.getByTestId('location-pathname')).not.toHaveTextContent('/members')
   })
 })
 

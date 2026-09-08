@@ -10671,6 +10671,7 @@
     },
     "kiroCrewAgentsPage": {
       "a_unique_identifier_for_this_workspace_agents_re": "Um identificador único para este workspace. Agentes referenciam workspaces pelo nome.",
+      "add_crew_member": "Adicionar membro da equipe",
       "additional_stores_coming_with_memory_v2": "Por enquanto, apenas o armazenamento padrão está disponível; o suporte a mais armazenamentos de memória chega em breve.",
       "agent_template_is_required": "O modelo de agente é obrigatório",
       "agents": "Agentes",
@@ -14377,7 +14378,7 @@
       "details": "Detalhes",
       "edit_in_crew_manager": "Editar no gerenciador de equipes",
       "edit_member": "Editar membro",
-      "empty_roster": "Ainda não há membros. Crie uma equipe no gerenciador para vê-la aqui.",
+      "empty_roster": "Ainda não há membros.",
       "inherited": "Herdado",
       "member_count_many": "{{count}} membros",
       "member_count_one": "{{count}} membro",

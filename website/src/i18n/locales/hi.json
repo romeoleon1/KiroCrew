@@ -10518,6 +10518,7 @@
     },
     "kiroCrewAgentsPage": {
       "a_unique_identifier_for_this_workspace_agents_re": "इस वर्कस्पेस के लिए एक अनूठा पहचानकर्ता। एजेंट वर्कस्पेस को नाम से संदर्भित करते हैं।",
+      "add_crew_member": "क्रू सदस्य जोड़ें",
       "additional_stores_coming_with_memory_v2": "अभी केवल डिफ़ॉल्ट स्टोर उपलब्ध है — और मेमोरी स्टोर के लिए समर्थन जल्द आ रहा है।",
       "agent_template_is_required": "एजेंट टेम्पलेट ज़रूरी है",
       "agents": "एजेंट",
@@ -14195,7 +14196,7 @@
       "details": "विवरण",
       "edit_in_crew_manager": "क्रू प्रबंधक में संपादित करें",
       "edit_member": "सदस्य संपादित करें",
-      "empty_roster": "अभी कोई क्रू सदस्य नहीं है। क्रू प्रबंधक में एक क्रू बनाएं, वह यहां दिखेगी।",
+      "empty_roster": "अभी कोई क्रू सदस्य नहीं है।",
       "inherited": "विरासत में मिला",
       "member_count_one": "{{count}} सदस्य",
       "member_count_other": "{{count}} सदस्य",
