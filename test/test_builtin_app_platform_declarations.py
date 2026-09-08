@@ -31,9 +31,10 @@ BACKEND CHILD PROCESS for the app:
   `sandbox.wrap_argv` WITHOUT the `first_party_fixed_argv` carve-out, and Kiro
   Crew has no native Windows sandbox backend, so on native Windows that spawn
   needs the operator's `agent.sandbox_allow_unsandboxed_exec=true` (or
-  `agent.sandbox='off'`). `dev_fleet` shipped with `windows` declared while in
+  `agent.sandbox='off'`). `dev_fleet` ships with `windows` declared while in
   this group, which is the precedent that the condition is accepted rather than
-  disqualifying.
+  disqualifying; the other four withhold `windows` in `_PLATFORM_EXCLUSIONS`
+  until their own backend-child path is verified there.
 
 `test_apps_needing_a_backend_child_are_pinned` keeps that second list honest, so
 a future app cannot join it unnoticed and quietly inherit the requirement.
@@ -53,7 +54,37 @@ from kiro_crew.apps.manifest import PlatformConfig
 #: Apps that deliberately withhold a platform, with the reason. An entry here is
 #: a reviewed decision; an app missing from BOTH this mapping and the `windows`
 #: declaration fails `test_every_builtin_declares_platform_os_explicitly`.
-_PLATFORM_EXCLUSIONS: dict[str, dict[str, str]] = {}
+_PLATFORM_EXCLUSIONS: dict[str, dict[str, str]] = {
+    "design_tweak": {
+        "reason": (
+            "Spawns a backend child process (dev-server child, process-tree "
+            "kill via kill_process_tree, port listener enumeration via "
+            "find_port_listeners) that has not been exercised on native "
+            "Windows. Needs verification before enabling."
+        ),
+    },
+    "file_explorer": {
+        "reason": (
+            "Spawns a backend child process for filesystem operations; native "
+            "Windows path handling for that child has not been exercised. "
+            "Needs verification before enabling."
+        ),
+    },
+    "md_notebook": {
+        "reason": (
+            "Spawns a backend child process running git operations against a "
+            "vault; native Windows git invocation and path handling for that "
+            "child has not been exercised. Needs verification before enabling."
+        ),
+    },
+    "workflows": {
+        "reason": (
+            "Spawns a backend child process orchestrating workflow runs; that "
+            "child's process lifecycle has not been exercised on native "
+            "Windows. Needs verification before enabling."
+        ),
+    },
+}
 
 #: Apps whose manifest declares `backend.entryPoint`, so the gateway spawns a
 #: separate backend process for them. On native Windows that spawn is gated on

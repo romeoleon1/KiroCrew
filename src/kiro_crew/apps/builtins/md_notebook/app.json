@@ -40,8 +40,7 @@
   "platform": {
     "os": [
       "macos",
-      "linux",
-      "windows"
+      "linux"
     ]
   },
   "backend": {

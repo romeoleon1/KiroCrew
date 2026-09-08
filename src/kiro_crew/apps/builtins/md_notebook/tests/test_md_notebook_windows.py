@@ -45,11 +45,14 @@ def server():
 def test_manifest_declares_every_platform_the_app_runs_on():
     """The app is aiohttp + git + filesystem work, all of which runs anywhere.
 
-    Pinned because omitting the block is not neutral: ``PlatformConfig`` defaults
-    ``os`` to ``["macos", "linux"]``, so an absent declaration is an active
-    refusal to enable the app on Windows rather than a missing opinion.
+    Windows is nonetheless withheld here (`_PLATFORM_EXCLUSIONS` in
+    `test/test_builtin_app_platform_declarations.py`): this app spawns a
+    backend child process running git, and that process's behaviour on native
+    Windows has not been verified in this change, even though the code paths
+    this file tests directly (the `gh` lookup, note-name validation, the
+    64-bit Program Files probe) already answer correctly there.
     """
-    assert _manifest()["platform"]["os"] == ["macos", "linux", "windows"]
+    assert _manifest()["platform"]["os"] == ["macos", "linux"]
 
 
 def test_declared_platforms_all_resolve_to_a_real_sys_platform():
@@ -61,7 +64,7 @@ def test_declared_platforms_all_resolve_to_a_real_sys_platform():
     from kiro_crew.apps.manifest import PlatformConfig
 
     cfg = PlatformConfig(os=_manifest()["platform"]["os"])
-    for sys_platform in ("darwin", "linux", "win32"):
+    for sys_platform in ("darwin", "linux"):
         assert cfg.supports_platform(sys_platform), sys_platform
 
 

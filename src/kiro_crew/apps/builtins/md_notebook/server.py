@@ -41,6 +41,7 @@ from kiro_crew.apps.builtins.md_notebook import notes as notes_mod
 from kiro_crew.apps.proxy_auth import raw_request_target, verify_proxy_request
 from kiro_crew.atomic_write import atomic_write, replace_with_retry
 from kiro_crew.config.paths import config_dir
+from kiro_crew.constants import WINDOWS_DEVICE_STEMS
 from kiro_crew.loop_lock import LoopBoundLock
 from kiro_crew.platform_compat import restrict_to_owner
 from kiro_crew.sel import sel
@@ -720,15 +721,6 @@ async def vault_path(vault: dict[str, Any], rel: Optional[str] = None) -> Path:
 #: never walks, so the note silently disappears from the app instead of erroring.
 _UNPORTABLE_CHARS = frozenset('<>:"|?*')
 
-#: Win32 device names, reserved with or without an extension — ``NUL.md`` opens
-#: the null device rather than creating a note, and a save to it is a silent
-#: no-op the user cannot tell from success.
-_RESERVED_STEMS = frozenset(
-    {"con", "prn", "aux", "nul"}
-    | {f"com{digit}" for digit in "123456789"}
-    | {f"lpt{digit}" for digit in "123456789"}
-)
-
 
 def _reject_unportable_component(part: str, field: str) -> None:
     """Refuse one path component Win32 cannot represent. Raises ``ApiError`` 400.
@@ -755,7 +747,7 @@ def _reject_unportable_component(part: str, field: str) -> None:
             400,
             code="path_not_a_note",
         )
-    if part.split(".", 1)[0].lower() in _RESERVED_STEMS:
+    if part.split(".", 1)[0].lower() in WINDOWS_DEVICE_STEMS:
         raise ApiError(
             f"{field} uses '{part}', a name Windows reserves for a device",
             400,

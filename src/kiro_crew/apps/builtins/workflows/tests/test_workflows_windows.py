@@ -41,7 +41,7 @@ APP_ROOT = Path(__file__).resolve().parents[1]
 APP_JSON = APP_ROOT / "app.json"
 
 APP_NAME = "workflows"
-DECLARED_OS = ["macos", "linux", "windows"]
+DECLARED_OS = ["macos", "linux"]
 
 GOOD_SCRIPT = (
     'META = {"name": "demo", "description": "d"}\n'
@@ -67,9 +67,12 @@ def manifest() -> AppManifest:
 
 
 def test_manifest_declares_every_platform_the_app_runs_on(raw_manifest: dict) -> None:
-    """Both narrower answers misinform: dropping ``windows`` reads as "does not run
-    on Windows", and omitting the block falls back to the implicit
-    ``["macos", "linux"]``, which drops Windows without a decision being made.
+    """Windows is withheld here (`_PLATFORM_EXCLUSIONS` in
+    `test/test_builtin_app_platform_declarations.py`): this app spawns a
+    backend child process orchestrating workflow runs, and that process's
+    lifecycle has not been verified on native Windows in this change, even
+    though the address-reuse and degrade-with-a-reason fixes this file tests
+    already behave correctly there.
     """
     assert raw_manifest["platform"]["os"] == DECLARED_OS
 
@@ -79,7 +82,7 @@ def test_declared_platforms_all_resolve_to_a_real_sys_platform(raw_manifest: dic
     so a declaration can claim a platform the gate silently rejects.
     """
     cfg = PlatformConfig(os=raw_manifest["platform"]["os"])
-    for sys_platform in ("darwin", "linux", "win32"):
+    for sys_platform in ("darwin", "linux"):
         assert cfg.supports_platform(sys_platform), sys_platform
 
 
@@ -97,15 +100,16 @@ def test_the_implicit_default_would_have_excluded_windows() -> None:
     assert not default_cfg.supports_platform("win32")
 
 
-def test_discovery_serializes_the_platform_declaration() -> None:
+def test_discovery_omits_the_platform_key_when_it_matches_the_default() -> None:
     """``PlatformConfig.to_dict()`` emits ``os`` only when it differs from the
-    default, so a regression to ``["macos", "linux"]`` does not merely change the
-    value — it removes the key, and the App Store detail page then renders no
-    platform row at all.
+    default. This app's declared ``["macos", "linux"]`` now equals that default
+    (Windows is withheld — see `_PLATFORM_EXCLUSIONS` in
+    `test/test_builtin_app_platform_declarations.py`), so the serialized entry
+    correctly omits the key rather than emitting a redundant one.
     """
     entry = next((a for a in discover_builtin_apps() if a.get("name") == APP_NAME), None)
     assert entry is not None, f"{APP_NAME!r} not discovered"
-    assert entry["platform"]["os"] == DECLARED_OS
+    assert "platform" not in entry
 
 
 def test_manifest_still_validates(manifest: AppManifest) -> None:

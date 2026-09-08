@@ -23,8 +23,7 @@
   "platform": {
     "os": [
       "macos",
-      "linux",
-      "windows"
+      "linux"
     ]
   },
   "permissions": {

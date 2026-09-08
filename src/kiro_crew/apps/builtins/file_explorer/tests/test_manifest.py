@@ -12,17 +12,16 @@ def _manifest() -> dict:
 
 # --- manifest platform declaration ---
 def test_manifest_declares_every_platform_the_app_runs_on():
-    """`platform.os` summarises the whole app, and every surface it exposes —
-    the directory tree, tabbed reads, markdown rendering, and folder search —
-    is ordinary stdlib filesystem work that runs anywhere.
-
-    Pinned because both narrower answers misinform: omitting the block falls
-    back to the implicit ``["macos", "linux"]`` default, which silently drops
-    Windows, and a hand-narrowed list reads as "does not run there" for a
-    platform the code has no trouble on.
+    """`platform.os` summarises the whole app. Every surface it exposes — the
+    directory tree, tabbed reads, markdown rendering, and folder search — is
+    ordinary stdlib filesystem work that runs anywhere, but Windows is
+    withheld here (`_PLATFORM_EXCLUSIONS` in
+    `test/test_builtin_app_platform_declarations.py`): this app spawns a
+    backend child process, and that process's Windows behaviour has not been
+    verified on a native Windows host in this change.
     """
     manifest = _manifest()
-    assert manifest["platform"]["os"] == ["macos", "linux", "windows"]
+    assert manifest["platform"]["os"] == ["macos", "linux"]
 
     # The reachable-root set is carried in the UI copy, not the manifest gate,
     # and it must track reality: the roots are home + the system temp dir on
@@ -47,5 +46,5 @@ def test_declared_platforms_all_resolve_to_a_real_sys_platform():
 
     manifest = _manifest()
     cfg = PlatformConfig(os=manifest["platform"]["os"])
-    for sys_platform in ("darwin", "linux", "win32"):
+    for sys_platform in ("darwin", "linux"):
         assert cfg.supports_platform(sys_platform), sys_platform
