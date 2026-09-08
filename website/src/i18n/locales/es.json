@@ -7306,7 +7306,8 @@
       "will_be_removed_on_save": "Se eliminará al guardar."
     },
     "selectionToolbar": {
-      "ask": "Preguntar en Chat lateral",
+      "ask": "Preguntar sobre esto",
+      "ask_hint": "Abre el Chat lateral con la selección citada: no se envía nada hasta que lo envíes, y el chat principal no se toca",
       "copy": "Copiar",
       "quote": "Citar"
     },
@@ -14436,6 +14437,7 @@
       "patrol_last_wake_ago": "Último despertar {{when}}",
       "patrol_none": "No hay patrulla programada.",
       "patrol_error": "No se pudo cargar el estado de patrulla de este miembro.",
+      "side_chat_draft_waiting": "Hay una pregunta sin enviar en el Chat lateral de este miembro",
       "patrol_error_roster": "No se pudo cargar el estado de patrulla de la lista.",
       "patrol_badge": "En patrulla · {{cycle}}",
       "patrol_badge_stopped": "Patrulla detenida",
