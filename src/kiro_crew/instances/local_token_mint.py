@@ -21,15 +21,27 @@ listener actually being dialled.
 **When a listener must prove itself.** A port carries no evidence of who holds
 it, and the credential goes on the wire before any reply comes back — so the
 question "is a Kiro Crew gateway of mine listening there" has to be answered
-first. There is exactly one case where it needs no answer: when the port is this
-gateway's OWN bound port, the listener is this very process, and there is no
-second party to prove anything about. For any other port
+first. There is exactly one case where it needs no answer: when the destination
+is this gateway's OWN bound port AND this gateway's socket answers on loopback,
+the listener is this very process, and there is no second party to prove
+anything about. Port equality alone does NOT establish that — a gateway bound to
+one interface (``KIROCREW_BIND=192.168.1.5``) leaves ``127.0.0.1`` on its own
+port free for any other local process. For every other port
 :func:`kiro_crew.port_resolution.port_is_gateway_owned` must confirm the
 listener is this user's gateway, and the mint is REFUSED when it cannot — never
 downgraded to "send it anyway and see". That is the same posture, for the same
 reason, as ``pod.runtime.mint_token``: refusing a live gateway costs an error
 message, while proceeding on an unproven port hands a credential to whatever
 answered.
+
+**What the proof does not cover: the address.** ``port_is_gateway_owned``
+attributes the listener on a port and is documented address-agnostic, while the
+request is made to an (address, port) pair. The two are only the same question
+on the address this gateway binds, so ``127.0.0.1`` is the one accepted
+destination — refused both by ``validate_loopback_host`` and again here, since a
+process holding ``127.0.0.2:P`` while a gateway holds ``127.0.0.1:P`` would
+otherwise satisfy a port-granular proof and be handed the secret. Widening the
+destination set belongs with an (address, port)-granular proof.
 
 The token is returned in memory only and is never logged.
 """
@@ -49,11 +61,40 @@ from kiro_crew.port_resolution import port_is_gateway_owned
 
 logger = logging.getLogger(__name__)
 
+# The bind addresses whose listener on <port> is reachable at
+# 127.0.0.1:<port> — the exact loopback bind, and the IPv4 wildcard that
+# includes it. Mirrors ``dashboard.urls.bind_address_for``'s own return values.
+# A SPECIFIC interface address is deliberately absent: see
+# :func:`_bind_covers_loopback`.
+_LOOPBACK_COVERING_BINDS = frozenset({DEFAULT_LOOPBACK_HOST, "0.0.0.0"})
+
+
+def _bind_covers_loopback(bind_host: str) -> bool:
+    """Return True when a listener bound to *bind_host* answers on loopback.
+
+    This decides whether "the destination port is my own port" is enough to
+    conclude "the destination listener is my own process". It is only enough
+    when this gateway's socket actually covers ``127.0.0.1``.
+
+    A gateway bound to ONE interface (``KIROCREW_BIND=192.168.1.5``) serves
+    ``192.168.1.5:<port>`` and leaves ``127.0.0.1:<port>`` free for any other
+    local process, so port equality there says nothing about who answers the
+    mint. ``::`` is excluded for the same reason it is not asserted elsewhere:
+    whether an IPv6 wildcard accepts IPv4 loopback depends on
+    ``bindv6only``, and a wrong guess in this direction hands out a credential.
+
+    Being wrong the OTHER way is cheap: an excluded address only means the
+    ownership proof runs, and that proof passes for a port this user's gateway
+    genuinely holds.
+    """
+    return bind_host.strip() in _LOOPBACK_COVERING_BINDS
+
 
 async def mint_loopback_token(
     port: int,
     *,
     own_port: int,
+    own_bind_host: str = "",
     loopback_host: str = DEFAULT_LOOPBACK_HOST,
     ttl: str = "20h",
     embed_parent_port: int | None = None,
@@ -61,13 +102,19 @@ async def mint_loopback_token(
 ) -> str:
     """Mint a dashboard token from the gateway listening on *loopback_host*:*port*.
 
-    *own_port* is the port THIS gateway bound. When it equals *port* the
-    destination is this process and the ownership proof is skipped as
-    inapplicable (see the module docstring); otherwise the proof is required and
-    a mint that cannot obtain it raises rather than sending the credential.
+    *own_port* is the port THIS gateway bound and *own_bind_host* the address it
+    bound it on. The ownership proof is skipped as inapplicable only when the
+    two together put the destination inside this very process — the same port,
+    on a socket that answers at :data:`DEFAULT_LOOPBACK_HOST` (see
+    :func:`_bind_covers_loopback`). In every other case, an unstated bind
+    address included, the proof is required and a mint that cannot obtain it
+    raises rather than sending the credential.
 
     *loopback_host* must already be validated by
-    :func:`kiro_crew.instances.validation.validate_loopback_host`.
+    :func:`kiro_crew.instances.validation.validate_loopback_host`, and must be
+    :data:`DEFAULT_LOOPBACK_HOST`: the ownership proof is port-granular, so that
+    is the only address it covers. Anything else raises before the credential is
+    read, let alone sent.
 
     *embed_parent_port* becomes the minted token's signed CSP frame-ancestor
     claim, exactly as it does on the ssh and ssm paths.
@@ -77,7 +124,27 @@ async def mint_loopback_token(
     """
     ttl = _validate_ttl(ttl)
     port = int(port)
-    is_self = port == int(own_port)
+    # The proof below attributes the listener on a PORT and is address-agnostic,
+    # while the request goes to an (address, port) pair — so the destination
+    # address is fenced here, at the send site, and not left to the caller's
+    # validation alone. Any other loopback address is a listener this proof
+    # cannot speak for, including under the self carve-out, whose "the listener
+    # is this very process" claim holds only for the address this gateway binds.
+    if loopback_host != DEFAULT_LOOPBACK_HOST:
+        raise TokenMintError(
+            f"refusing to mint a token at {loopback_host}:{port}: only "
+            f"{DEFAULT_LOOPBACK_HOST} is a provable destination, because holding "
+            f"the port is what can be attributed and holding an address on it "
+            f"cannot. Run the destination gateway on {DEFAULT_LOOPBACK_HOST}, or "
+            f"use the ssh transport."
+        )
+    # The carve-out needs BOTH halves of "the listener is this very process":
+    # the same port, and a socket of ours that answers on loopback. Port
+    # equality alone is satisfied by a gateway bound to one non-loopback
+    # interface, which leaves 127.0.0.1:<port> free for a foreign local
+    # listener. Without the bind address the premise is unverifiable, so the
+    # proof runs.
+    is_self = port == int(own_port) and _bind_covers_loopback(own_bind_host)
     if not is_self and not port_is_gateway_owned(port):
         raise TokenMintError(
             f"refusing to mint a token on loopback port {port}: could not prove "
@@ -102,8 +169,8 @@ async def mint_loopback_token(
     if embed_parent_port:
         params["embed_parent_port"] = str(int(embed_parent_port))
     logger.info(
-        "Minting token on loopback port %d (ttl=%s, self=%s)", port, ttl, is_self
-    )  # no token, no secret in logs
+        "Loopback mint on port %d (ttl=%s, self=%s)", port, ttl, is_self
+    )  # logs the port and ttl only, never the minted value
     timeout = aiohttp.ClientTimeout(total=timeout_secs)
     try:
         async with aiohttp.ClientSession(timeout=timeout) as session:

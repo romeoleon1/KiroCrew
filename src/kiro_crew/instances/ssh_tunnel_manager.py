@@ -85,6 +85,12 @@ from kiro_crew.instances.constants import (
 from kiro_crew.instances.constants import (
     DEFAULT_CONNECT_TIMEOUT_SECS as _DEFAULT_CONNECT_TIMEOUT_SECS,
 )
+from kiro_crew.instances.constants import (
+    DEFAULT_LOOPBACK_CONNECT_TIMEOUT_SECS as _DEFAULT_LOOPBACK_CONNECT_TIMEOUT_SECS,
+)
+from kiro_crew.instances.constants import (
+    DEFAULT_LOOPBACK_MINT_TIMEOUT_SECS as _DEFAULT_LOOPBACK_MINT_TIMEOUT_SECS,
+)
 from kiro_crew.instances.constants import DEFAULT_MAX_RECOVERY_ATTEMPTS as _MAX_RECOVERY
 from kiro_crew.instances.constants import DEFAULT_MINT_TIMEOUT_SECS as _DEFAULT_MINT_TIMEOUT_SECS
 from kiro_crew.instances.constants import DEFAULT_PROBE_FAILURE_THRESHOLD as _PROBE_FAILS
@@ -113,12 +119,6 @@ from kiro_crew.instances.constants import (
 )
 from kiro_crew.instances.constants import (
     DIAGNOSTICS_CONNECT_TIMEOUT_CAP_SECS as _DIAGNOSTICS_CONNECT_TIMEOUT_CAP_SECS,
-)
-from kiro_crew.instances.constants import (
-    DEFAULT_LOOPBACK_CONNECT_TIMEOUT_SECS as _DEFAULT_LOOPBACK_CONNECT_TIMEOUT_SECS,
-)
-from kiro_crew.instances.constants import (
-    DEFAULT_LOOPBACK_MINT_TIMEOUT_SECS as _DEFAULT_LOOPBACK_MINT_TIMEOUT_SECS,
 )
 from kiro_crew.instances.constants import SEARCH_REPLY_MAX_BYTES as _SEARCH_REPLY_MAX_BYTES
 from kiro_crew.instances.diagnostics import (
@@ -1207,6 +1207,7 @@ class SshTunnelManager:
         mint_token: Callable[..., Awaitable[str]] = mint_remote_token,
         tunnel_factory: Callable[..., _SshTunnel] | None = None,
         parent_port: int | None = None,
+        parent_bind_host: str = "",
     ) -> None:
         self._registry = registry
         # The port the embedding dashboard ACTUALLY bound, carried into every
@@ -1222,6 +1223,12 @@ class SshTunnelManager:
         # passed to ``_register_instances_hooks``), so it is threaded in here
         # rather than re-derived.
         self._parent_port = parent_port if parent_port else _LOCAL_DASHBOARD_PORT
+        # The ADDRESS this gateway bound that port on, threaded in from the same
+        # place as the port. The loopback mint needs both to tell "the
+        # destination is my own listener" from "the destination is my own port
+        # number", which differ on a gateway bound to one interface. Empty means
+        # unstated, and the mint then proves the listener instead of assuming.
+        self._parent_bind_host = parent_bind_host
         self._allocator = PortAllocator(base_port=base_port)
         self._connect_timeout = connect_timeout_secs
         self._ssh_compression = ssh_compression
@@ -1549,8 +1556,7 @@ class SshTunnelManager:
             if not self._loopback_allowed():
                 raise LoopbackValidationError(
                     "the loopback transport is off. Turn it on with `kirocrew "
-                    "config set instances.allow_loopback_transport true` and "
-                    "restart the gateway."
+                    "config set instances.allow_loopback_transport true`."
                 )
             return _TransportParams(
                 method=CONNECTION_METHOD_LOOPBACK,
@@ -1587,6 +1593,7 @@ class SshTunnelManager:
             return await mint_loopback_token(
                 inst.remote_port,
                 own_port=self._parent_port,
+                own_bind_host=self._parent_bind_host,
                 loopback_host=params.loopback_host,
                 ttl=inst.ttl,
                 embed_parent_port=self._parent_port,
@@ -1652,10 +1659,10 @@ class SshTunnelManager:
         # gateway's, so the two differ and the same-origin branch rejects it.
         # Browsers forbid scripts from forging either header.
         #
-        # Mirroring the remote port instead made the shipped defaults
-        # self-contradictory: a stock gateway binds the same default port on
-        # both ends, so a stock hub already held the port a stock remote
-        # reported and two stock installs could never connect (#1972).
+        # Mirroring the remote port is not an option the shipped defaults
+        # allow: a stock gateway binds the same default port on both ends, so a
+        # stock hub already holds the port a stock remote reports, and two
+        # stock installs could never connect under that rule.
         #
         # Every instance's recorded port stays reserved, and the allocator
         # probes each candidate, so a port anything still holds — including a
@@ -1668,11 +1675,10 @@ class SshTunnelManager:
         # session to the remote until the OS reaps it. That leak is now
         # reclaimed by ``_reclaim_orphan_forwarder`` above — by the child's
         # RECORDED pid behind a strict exact-argv identity check, never by
-        # scanning the process table. The reaper that scan-based approach
-        # replaced matched argv patterns and could SIGTERM a forward the
-        # operator had opened themselves (#1972); an unrecorded or
-        # unverified process is therefore left alone, and allocation simply
-        # skips its port.
+        # scanning the process table. Argv-pattern matching over the process
+        # table is off the table because it can SIGTERM a forward the operator
+        # opened themselves; an unrecorded or unverified process is therefore
+        # left alone, and allocation simply skips its port.
         #
         # There is deliberately no "take my own previous port back" branch.
         # It reads as free stability, but the case it fires in cannot benefit:
